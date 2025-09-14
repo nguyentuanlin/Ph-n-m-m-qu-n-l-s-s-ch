@@ -51,7 +51,7 @@ const ChartFive: React.FC = () => {
       fontFamily: "Satoshi",
 
       markers: {
-        radius: 99,
+        size: 99,
       },
     },
     grid: {

@@ -13,11 +13,10 @@ const router = express.Router();
 // @access  Private
 router.get('/for-assignment', protect, async (req, res) => {
   try {
-    const books = await Book.find({ isActive: true })
-      .populate('unit', 'name')
-      .populate('department', 'name')
-      .select('title bookNumber description unit department')
-      .sort({ title: 1 });
+    const books = await Book.find({ status: 'active' })
+      .populate('assignedTo', 'fullName email')
+      .select('name code description department assignedTo')
+      .sort({ name: 1 });
 
     res.status(200).json({
       status: 'success',
@@ -73,13 +72,11 @@ router.get('/', protect, auditLogger(), async (req, res) => {
 
     res.status(200).json({
       status: 'success',
-      data: {
-        books,
-        pagination: {
-          current: parseInt(page),
-          pages: Math.ceil(total / limit),
-          total
-        }
+      data: books,
+      pagination: {
+        current: parseInt(page),
+        pages: Math.ceil(total / limit),
+        total
       }
     });
   } catch (error) {

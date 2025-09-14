@@ -32,7 +32,7 @@ import AddIcon from '@mui/icons-material/Add'
 import RemoveIcon from '@mui/icons-material/Remove'
 import { DataGrid, GridColDef } from '@mui/x-data-grid'
 import NotificationSnackbar from '@/components/common/NotificationSnackbar'
-import { getPositions, createPosition, updatePosition, deletePosition } from '@/js/apiService'
+import { getPositions, createPosition, updatePosition, deletePosition, CreateUpdatePosition } from '@/js/apiService'
 
 interface Position {
   _id: string
@@ -58,6 +58,7 @@ interface Position {
   createdAt: string
   updatedAt: string
 }
+
 
 interface Department {
   _id: string
@@ -224,7 +225,10 @@ export default function AdminPositionsPage() {
       setLoading(true)
       const token = localStorage.getItem('token') || ''
       const response = await getPositions()
-      setPositions(response.data.positions)
+      console.log('Positions API response:', response)
+      // Backend now returns data directly, not nested in positions property
+      const data = response.data || []
+      setPositions(Array.isArray(data) ? data : [])
     } catch (error) {
       console.error('Error fetching positions:', error)
       showSnackbar('Không thể tải danh sách chức vụ', 'error')
@@ -245,7 +249,10 @@ export default function AdminPositionsPage() {
       
       if (response.ok) {
         const data = await response.json()
-        setDepartments(data.data.departments)
+        console.log('Departments API response:', data)
+        // Backend now returns data directly, not nested in departments property
+        const departments = data.data || []
+        setDepartments(Array.isArray(departments) ? departments : [])
       }
     } catch (error) {
       console.error('Error fetching departments:', error)
@@ -264,7 +271,10 @@ export default function AdminPositionsPage() {
       
       if (response.ok) {
         const data = await response.json()
-        setRanks(data.data.ranks)
+        console.log('Ranks API response:', data)
+        // Backend now returns data directly, not nested in ranks property
+        const ranks = data.data || []
+        setRanks(Array.isArray(ranks) ? ranks : [])
       }
     } catch (error) {
       console.error('Error fetching ranks:', error)
@@ -328,7 +338,7 @@ export default function AdminPositionsPage() {
       setLoading(true)
       
       const token = localStorage.getItem('token') || ''
-      const positionData = {
+      const positionData: CreateUpdatePosition = {
         name: formData.name,
         code: formData.code,
         department: formData.department,
@@ -413,7 +423,7 @@ export default function AdminPositionsPage() {
 
         <Paper sx={{ height: 600, width: '100%' }}>
           <DataGrid
-            rows={positions.map(pos => ({ ...pos, id: pos._id }))}
+            rows={(positions || []).map(pos => ({ ...pos, id: pos._id }))}
             columns={columns}
             loading={loading}
             pageSizeOptions={[10, 25, 50]}
@@ -456,7 +466,7 @@ export default function AdminPositionsPage() {
                   onChange={(e) => setFormData({ ...formData, department: e.target.value })}
                   label="Phòng ban"
                 >
-                  {departments.map((dept) => (
+                  {(departments || []).map((dept) => (
                     <MenuItem key={dept._id} value={dept._id}>
                       {dept.name} ({dept.code})
                     </MenuItem>
@@ -486,7 +496,7 @@ export default function AdminPositionsPage() {
                     label="Cấp bậc tối thiểu"
                   >
                     <MenuItem value="">Không yêu cầu</MenuItem>
-                    {ranks.map((rank) => (
+                    {(ranks || []).map((rank) => (
                       <MenuItem key={rank._id} value={rank._id}>
                         {rank.name} (Cấp {rank.level})
                       </MenuItem>

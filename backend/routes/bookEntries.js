@@ -154,13 +154,11 @@ router.get('/', protect, auditLogger(), async (req, res) => {
 
     res.status(200).json({
       status: 'success',
-      data: {
-        entries,
-        pagination: {
-          current: parseInt(page),
-          pages: Math.ceil(total / limit),
-          total
-        }
+      data: entries,
+      pagination: {
+        current: parseInt(page),
+        pages: Math.ceil(total / limit),
+        total
       }
     });
   } catch (error) {

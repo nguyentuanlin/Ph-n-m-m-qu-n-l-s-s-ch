@@ -159,7 +159,10 @@ export default function AdminDepartmentsPage() {
       setLoading(true)
       const token = localStorage.getItem('token') || ''
       const response = await getDepartments()
-      setDepartments(response.data.departments)
+      console.log('Departments API response:', response)
+      // Backend now returns data directly, not nested in departments property
+      const data = response.data || []
+      setDepartments(Array.isArray(data) ? data : [])
     } catch (error) {
       console.error('Error fetching departments:', error)
       showSnackbar('Không thể tải danh sách phòng ban', 'error')

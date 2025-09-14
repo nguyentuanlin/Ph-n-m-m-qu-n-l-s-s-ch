@@ -11,15 +11,25 @@
       "static/chunks/main-app.js",
       "static/chunks/app/admin/task-assignments/page.js"
     ],
-    "/admin/dashboard/page": [
+    "/admin/units/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/admin/dashboard/page.js"
+      "static/chunks/app/admin/units/page.js"
+    ],
+    "/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/page.js"
     ],
     "/pages/admins/users-management/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/pages/admins/users-management/page.js"
+    ],
+    "/admin/ranks/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/admin/ranks/page.js"
     ],
     "/_not-found/page": [
       "static/chunks/webpack.js",

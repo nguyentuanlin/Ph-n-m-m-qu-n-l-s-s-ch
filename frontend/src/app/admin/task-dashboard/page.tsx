@@ -30,7 +30,7 @@ const TaskDashboardPage = () => {
       ]);
       
       setTasks(tasksData.data);
-      setUpcomingReminders(remindersData.data);
+      setUpcomingReminders(remindersData);
       setStats(statsData);
     } catch (error) {
       console.error('Error loading dashboard data:', error);

@@ -8,6 +8,20 @@ const cron = require('node-cron');
 // Load environment variables
 dotenv.config({ path: './.env' });
 
+// Set default environment variables if .env doesn't exist
+if (!process.env.JWT_SECRET) {
+  process.env.JWT_SECRET = 'your-super-secret-jwt-key-here-make-it-very-long-and-secure';
+}
+if (!process.env.MONGODB_URI) {
+  process.env.MONGODB_URI = 'mongodb://localhost:27017/PMhuanluyen';
+}
+if (!process.env.PORT) {
+  process.env.PORT = '5002';
+}
+if (!process.env.FRONTEND_URL) {
+  process.env.FRONTEND_URL = 'http://localhost:3000';
+}
+
 // Import database connection
 const connectDB = require('./config/mongodb');
 
@@ -57,19 +71,19 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Connect to MongoDB
 connectDB();
 
-// Seed data and create admin user
-const initializeData = async () => {
-  try {
-    // First seed reference data
-    await seedData();
-    // Then create admin user
-    await createAdminUser();
-  } catch (error) {
-    console.error('Error initializing data:', error);
-  }
-};
+// Seed data and create admin user (disabled - user will create manually)
+// const initializeData = async () => {
+//   try {
+//     // First seed reference data
+//     await seedData();
+//     // Then create admin user
+//     await createAdminUser();
+//   } catch (error) {
+//     console.error('Error initializing data:', error);
+//   }
+// };
 
-initializeData();
+// initializeData();
 
 // Swagger Documentation
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, {

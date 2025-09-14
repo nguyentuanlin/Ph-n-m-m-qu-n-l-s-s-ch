@@ -7,24 +7,53 @@ const auditLogger = require('../middleware/auditLogger');
 
 const router = express.Router();
 
+// Middleware to ensure response structure
+const ensureArrayResponse = (req, res, next) => {
+  const originalJson = res.json;
+  res.json = function(data) {
+    if (data && data.data && !Array.isArray(data.data)) {
+      data.data = [];
+    }
+    return originalJson.call(this, data);
+  };
+  next();
+};
+
 // @desc    Get users for task assignment (all roles can access)
 // @route   GET /api/users/for-assignment
 // @access  Private
 router.get('/for-assignment', protect, async (req, res) => {
   try {
     const users = await User.find({ isActive: true })
-      .populate('unit', 'name')
-      .populate('department', 'name')
-      .populate('rank', 'name')
-      .populate('position', 'name')
-      .select('name fullName email role unit department rank position')
-      .sort({ name: 1 });
+      .populate({
+        path: 'unit',
+        select: 'name code type',
+        options: { strictPopulate: false }
+      })
+      .populate({
+        path: 'department', 
+        select: 'name code',
+        options: { strictPopulate: false }
+      })
+      .populate({
+        path: 'rank',
+        select: 'name level category',
+        options: { strictPopulate: false }
+      })
+      .populate({
+        path: 'position',
+        select: 'name code level',
+        options: { strictPopulate: false }
+      })
+      .select('fullName email role unit department rank position')
+      .sort({ fullName: 1 });
 
     res.status(200).json({
       status: 'success',
-      data: users
+      data: users || []
     });
   } catch (error) {
+    console.error('Error fetching users for assignment:', error);
     res.status(500).json({
       status: 'error',
       message: 'Lỗi lấy danh sách người dùng',
@@ -33,10 +62,155 @@ router.get('/for-assignment', protect, async (req, res) => {
   }
 });
 
+// @desc    Test API - Get users without populate
+// @route   GET /api/users/test
+// @access  Private (Admin only)
+router.get('/test', protect, restrictTo('admin'), async (req, res) => {
+  try {
+    const users = await User.find({})
+      .select('fullName email role unit department rank position')
+      .limit(5);
+
+    res.status(200).json({
+      status: 'success',
+      data: users || [],
+      message: 'Test API - Raw data without populate'
+    });
+  } catch (error) {
+    console.error('Error in test API:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Test API error',
+      error: error.message
+    });
+  }
+});
+
+// @desc    Debug API - Check database connection and data
+// @route   GET /api/users/debug
+// @access  Private (Admin only)
+router.get('/debug', protect, restrictTo('admin'), async (req, res) => {
+  try {
+    // Check if User model exists
+    const userCount = await User.countDocuments();
+    
+    // Get first user to check structure
+    const firstUser = await User.findOne().select('fullName email role');
+    
+    // Check if we can find users
+    const allUsers = await User.find({}).limit(3).select('fullName email role');
+    
+    res.status(200).json({
+      status: 'success',
+      data: {
+        userCount,
+        firstUser,
+        allUsers: allUsers || [],
+        isArray: Array.isArray(allUsers),
+        type: typeof allUsers
+      },
+      message: 'Debug API - Database connection and data check'
+    });
+  } catch (error) {
+    console.error('Error in debug API:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Debug API error',
+      error: error.message
+    });
+  }
+});
+
+// @desc    Simple users API - Minimal populate
+// @route   GET /api/users/simple
+// @access  Private (Admin only)
+router.get('/simple', protect, restrictTo('admin'), async (req, res) => {
+  try {
+    const { page = 1, limit = 10 } = req.query;
+    
+    const users = await User.find({})
+      .populate('rank', 'name')
+      .populate('unit', 'name')
+      .populate('department', 'name')
+      .populate('position', 'name')
+      .select('fullName email role unit department rank position')
+      .sort({ createdAt: -1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
+
+    const total = await User.countDocuments({});
+
+    res.status(200).json({
+      status: 'success',
+      data: users || [],
+      pagination: {
+        current: parseInt(page),
+        pages: Math.ceil(total / limit),
+        total
+      }
+    });
+  } catch (error) {
+    console.error('Error in simple users API:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Simple users API error',
+      error: error.message
+    });
+  }
+});
+
+// @desc    Emergency users API - No populate at all
+// @route   GET /api/users/emergency
+// @access  Private (Admin only)
+router.get('/emergency', protect, restrictTo('admin'), async (req, res) => {
+  try {
+    const { page = 1, limit = 10 } = req.query;
+    
+    const users = await User.find({})
+      .select('fullName email role unit department rank position isActive createdAt')
+      .sort({ createdAt: -1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
+
+    const total = await User.countDocuments({});
+
+    // Transform data to ensure it's always an array
+    const safeUsers = Array.isArray(users) ? users.map(user => ({
+      _id: user._id,
+      fullName: user.fullName || 'N/A',
+      email: user.email || 'N/A',
+      role: user.role || 'staff',
+      unit: user.unit || null,
+      department: user.department || null,
+      rank: user.rank || null,
+      position: user.position || null,
+      isActive: user.isActive !== undefined ? user.isActive : true,
+      createdAt: user.createdAt
+    })) : [];
+
+    res.status(200).json({
+      status: 'success',
+      data: safeUsers,
+      pagination: {
+        current: parseInt(page),
+        pages: Math.ceil(total / limit),
+        total
+      }
+    });
+  } catch (error) {
+    console.error('Error in emergency users API:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Emergency users API error',
+      error: error.message
+    });
+  }
+});
+
 // @desc    Get all users
 // @route   GET /api/users
 // @access  Private (Admin only)
-router.get('/', protect, restrictTo('admin'), auditLogger(), async (req, res) => {
+router.get('/', protect, restrictTo('admin'), auditLogger(), ensureArrayResponse, async (req, res) => {
   try {
     const { page = 1, limit = 10, department, role, search } = req.query;
     const query = {};
@@ -60,29 +234,44 @@ router.get('/', protect, restrictTo('admin'), auditLogger(), async (req, res) =>
       ];
     }
 
-    // Admin can see all users
-
-    const users = await User.find(query)
-      .populate('assignedBooks.bookId', 'name code type')
-      .select('-password')
-      .sort({ createdAt: -1 })
-      .limit(limit * 1)
-      .skip((page - 1) * limit);
+    // Get users with simple populate to avoid errors
+    let users = [];
+    try {
+      users = await User.find(query)
+        .populate('rank', 'name level category')
+        .populate('unit', 'name code type')
+        .populate('department', 'name code')
+        .populate('position', 'name code level')
+        .select('-password')
+        .sort({ createdAt: -1 })
+        .limit(limit * 1)
+        .skip((page - 1) * limit);
+    } catch (populateError) {
+      console.warn('Populate error, falling back to basic query:', populateError.message);
+      // Fallback to basic query without populate
+      users = await User.find(query)
+        .select('-password')
+        .sort({ createdAt: -1 })
+        .limit(limit * 1)
+        .skip((page - 1) * limit);
+    }
 
     const total = await User.countDocuments(query);
 
+    // Ensure we always return an array
+    const safeUsers = Array.isArray(users) ? users : [];
+
     res.status(200).json({
       status: 'success',
-      data: {
-        users,
-        pagination: {
-          current: parseInt(page),
-          pages: Math.ceil(total / limit),
-          total
-        }
+      data: safeUsers,
+      pagination: {
+        current: parseInt(page),
+        pages: Math.ceil(total / limit),
+        total
       }
     });
   } catch (error) {
+    console.error('Error in users API:', error);
     res.status(500).json({
       status: 'error',
       message: 'Server error',
@@ -97,6 +286,10 @@ router.get('/', protect, restrictTo('admin'), auditLogger(), async (req, res) =>
 router.get('/:id', protect, auditLogger(), async (req, res) => {
   try {
     const user = await User.findById(req.params.id)
+      .populate('rank', 'name level category')
+      .populate('unit', 'name code type')
+      .populate('department', 'name code')
+      .populate('position', 'name code level')
       .populate('assignedBooks.bookId', 'name code type department')
       .select('-password');
 
@@ -108,7 +301,7 @@ router.get('/:id', protect, auditLogger(), async (req, res) => {
     }
 
     // Check access permissions
-    if (req.user.role === 'user' && req.user._id.toString() !== req.params.id) {
+    if (req.user.role === 'staff' && req.user._id.toString() !== req.params.id) {
       return res.status(403).json({
         status: 'error',
         message: 'Access denied'
@@ -384,7 +577,7 @@ router.get('/:id/stats', protect, auditLogger(), async (req, res) => {
     const userId = req.params.id;
 
     // Check access permissions
-    if (req.user.role === 'user' && req.user._id.toString() !== userId) {
+    if (req.user.role === 'staff' && req.user._id.toString() !== userId) {
       return res.status(403).json({
         status: 'error',
         message: 'Access denied'

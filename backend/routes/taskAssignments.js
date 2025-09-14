@@ -23,20 +23,30 @@ const checkTaskPermission = async (req, res, next) => {
     if (taskId) {
       const task = await TaskAssignment.findById(taskId);
       if (!task) {
-        return res.status(404).json({ message: 'Không tìm thấy công việc' });
+        return res.status(404).json({
+      status: 'error',
+      message: 'Không tìm thấy công việc'
+    });
       }
       
       // Kiểm tra quyền truy cập
       if (task.assignedTo.toString() !== user.id && 
           task.assignedBy.toString() !== user.id &&
           task.unit.toString() !== user.unit.toString()) {
-        return res.status(403).json({ message: 'Không có quyền truy cập công việc này' });
+        return res.status(403).json({
+      status: 'error',
+      message: 'Không có quyền truy cập công việc này'
+    });
       }
     }
     
     next();
   } catch (error) {
-    res.status(500).json({ message: 'Lỗi kiểm tra quyền truy cập', error: error.message });
+    res.status(500).json({
+      status: 'error',
+      message: 'Lỗi kiểm tra quyền truy cập',
+      error: error.message
+    });
   }
 };
 
@@ -71,7 +81,7 @@ router.get('/', auth, async (req, res) => {
       query.unit = user.unit;
     } else {
       // Nhân viên chỉ xem được công việc được giao cho mình
-      query.assignedTo = user.id;
+      query.assignedTo = user._id;
     }
 
     // Áp dụng các bộ lọc
@@ -96,22 +106,22 @@ router.get('/', auth, async (req, res) => {
     sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
 
     const tasks = await TaskAssignment.find(query)
-      .populate('assignedBy', 'name email position')
-      .populate('assignedTo', 'name email position')
-      .populate('bookId', 'title bookNumber')
-      .populate('bookEntryId', 'title entryNumber')
+      .populate('assignedBy', 'fullName email position')
+      .populate('assignedTo', 'fullName email position')
+      .populate('bookId', 'name code')
+      .populate('bookEntryId', 'entryDate data')
       .populate('unit', 'name')
       .populate('department', 'name')
-      .populate('createdBy', 'name email')
-      .populate('updatedBy', 'name email')
+      .populate('createdBy', 'fullName email')
+      .populate('updatedBy', 'fullName email')
       .sort(sortOptions)
       .limit(limit * 1)
       .skip((page - 1) * limit);
 
     const total = await TaskAssignment.countDocuments(query);
 
-    res.json({
-      success: true,
+    res.status(200).json({
+      status: 'success',
       data: tasks,
       pagination: {
         current: parseInt(page),
@@ -120,7 +130,11 @@ router.get('/', auth, async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ message: 'Lỗi lấy danh sách giao việc', error: error.message });
+    res.status(500).json({
+      status: 'error',
+      message: 'Lỗi lấy danh sách giao việc',
+      error: error.message
+    });
   }
 });
 
@@ -141,7 +155,7 @@ router.get('/stats', auth, async (req, res) => {
         matchQuery.unit = user.unit;
       }
     } else {
-      matchQuery.assignedTo = user.id;
+      matchQuery.assignedTo = user._id;
     }
 
     console.log('Match query:', matchQuery);
@@ -190,8 +204,8 @@ router.get('/stats', auth, async (req, res) => {
       });
     }
 
-    res.json({
-      success: true,
+    res.status(200).json({
+      status: 'success',
       data: {
         total: totalTasks,
         overdue: overdueCount,
@@ -200,7 +214,11 @@ router.get('/stats', auth, async (req, res) => {
     });
   } catch (error) {
     console.error('Error in stats endpoint:', error);
-    res.status(500).json({ message: 'Lỗi lấy thống kê', error: error.message });
+    res.status(500).json({
+      status: 'error',
+      message: 'Lỗi lấy thống kê',
+      error: error.message
+    });
   }
 });
 
@@ -210,27 +228,34 @@ router.get('/stats', auth, async (req, res) => {
 router.get('/:id', auth, checkTaskPermission, async (req, res) => {
   try {
     const task = await TaskAssignment.findById(req.params.id)
-      .populate('assignedBy', 'name email position unit department')
-      .populate('assignedTo', 'name email position unit department')
-      .populate('bookId', 'title bookNumber description')
-      .populate('bookEntryId', 'title entryNumber content')
+      .populate('assignedBy', 'fullName email position unit department')
+      .populate('assignedTo', 'fullName email position unit department')
+      .populate('bookId', 'name code description')
+      .populate('bookEntryId', 'entryDate data')
       .populate('unit', 'name description')
       .populate('department', 'name description')
-      .populate('createdBy', 'name email')
-      .populate('updatedBy', 'name email')
-      .populate('approvedBy', 'name email')
-      .populate('notes.author', 'name email');
+      .populate('createdBy', 'fullName email')
+      .populate('updatedBy', 'fullName email')
+      .populate('approvedBy', 'fullName email')
+      .populate('notes.author', 'fullName email');
 
     if (!task) {
-      return res.status(404).json({ message: 'Không tìm thấy giao việc' });
+      return res.status(404).json({
+      status: 'error',
+      message: 'Không tìm thấy giao việc'
+    });
     }
 
-    res.json({
-      success: true,
+    res.status(200).json({
+      status: 'success',
       data: task
     });
   } catch (error) {
-    res.status(500).json({ message: 'Lỗi lấy chi tiết giao việc', error: error.message });
+    res.status(500).json({
+      status: 'error',
+      message: 'Lỗi lấy chi tiết giao việc',
+      error: error.message
+    });
   }
 });
 
@@ -259,24 +284,36 @@ router.post('/', auth, auditLogger, async (req, res) => {
 
     // Kiểm tra quyền tạo giao việc
     if (req.user.role !== 'admin' && req.user.role !== 'commander') {
-      return res.status(403).json({ message: 'Không có quyền tạo giao việc' });
+      return res.status(403).json({
+      status: 'error',
+      message: 'Không có quyền tạo giao việc'
+    });
     }
 
     // Kiểm tra sổ sách và mục sổ sách tồn tại
     const book = await Book.findById(bookId);
     if (!book) {
-      return res.status(400).json({ message: 'Sổ sách không tồn tại' });
+      return res.status(400).json({
+      status: 'error',
+      message: 'Sổ sách không tồn tại'
+    });
     }
 
     const bookEntry = await BookEntry.findById(bookEntryId);
     if (!bookEntry) {
-      return res.status(400).json({ message: 'Mục sổ sách không tồn tại' });
+      return res.status(400).json({
+      status: 'error',
+      message: 'Mục sổ sách không tồn tại'
+    });
     }
 
     // Kiểm tra người nhận việc
     const assignedUser = await User.findById(assignedTo);
     if (!assignedUser) {
-      return res.status(400).json({ message: 'Người nhận việc không tồn tại' });
+      return res.status(400).json({
+      status: 'error',
+      message: 'Người nhận việc không tồn tại'
+    });
     }
 
     // Tạo giao việc mới
@@ -285,7 +322,7 @@ router.post('/', auth, auditLogger, async (req, res) => {
       description,
       bookId,
       bookEntryId,
-      assignedBy: req.user.id,
+      assignedBy: req.user._id,
       assignedTo,
       deadline: new Date(deadline),
       priority,
@@ -293,7 +330,7 @@ router.post('/', auth, auditLogger, async (req, res) => {
       unit: unit || req.user.unit,
       department: department || req.user.department,
       tags,
-      createdBy: req.user.id
+      createdBy: req.user._id
     };
 
     console.log('Task data to save:', taskData);
@@ -328,22 +365,28 @@ router.post('/', auth, auditLogger, async (req, res) => {
 
     // Populate để trả về thông tin đầy đủ
     await task.populate([
-      { path: 'assignedBy', select: 'name email position' },
-      { path: 'assignedTo', select: 'name email position' },
-      { path: 'bookId', select: 'title bookNumber' },
-      { path: 'bookEntryId', select: 'title entryNumber' },
+      { path: 'assignedBy', select: 'fullName email position' },
+      { path: 'assignedTo', select: 'fullName email position' },
+      { path: 'bookId', select: 'name code' },
+      { path: 'bookEntryId', select: 'entryDate data' },
       { path: 'unit', select: 'name' },
       { path: 'department', select: 'name' }
     ]);
 
     res.status(201).json({
-      success: true,
+      status: 'success',
       message: 'Tạo giao việc thành công',
-      data: task
+      data: {
+        task
+      }
     });
   } catch (error) {
     console.error('Error creating task assignment:', error);
-    res.status(500).json({ message: 'Lỗi tạo giao việc', error: error.message });
+    res.status(500).json({
+      status: 'error',
+      message: 'Lỗi tạo giao việc',
+      error: error.message
+    });
   }
 });
 
@@ -354,7 +397,10 @@ router.put('/:id', auth, checkTaskPermission, auditLogger, async (req, res) => {
   try {
     const task = await TaskAssignment.findById(req.params.id);
     if (!task) {
-      return res.status(404).json({ message: 'Không tìm thấy giao việc' });
+      return res.status(404).json({
+      status: 'error',
+      message: 'Không tìm thấy giao việc'
+    });
     }
 
     // Kiểm tra quyền cập nhật
@@ -363,30 +409,37 @@ router.put('/:id', auth, checkTaskPermission, auditLogger, async (req, res) => {
                      (req.user.role === 'commander' && task.unit.toString() === req.user.unit.toString());
 
     if (!canUpdate) {
-      return res.status(403).json({ message: 'Không có quyền cập nhật giao việc này' });
+      return res.status(403).json({
+      status: 'error',
+      message: 'Không có quyền cập nhật giao việc này'
+    });
     }
 
-    const updateData = { ...req.body, updatedBy: req.user.id };
+    const updateData = { ...req.body, updatedBy: req.user._id };
     const updatedTask = await TaskAssignment.findByIdAndUpdate(
       req.params.id,
       updateData,
       { new: true, runValidators: true }
     ).populate([
-      { path: 'assignedBy', select: 'name email position' },
-      { path: 'assignedTo', select: 'name email position' },
-      { path: 'bookId', select: 'title bookNumber' },
-      { path: 'bookEntryId', select: 'title entryNumber' },
+      { path: 'assignedBy', select: 'fullName email position' },
+      { path: 'assignedTo', select: 'fullName email position' },
+      { path: 'bookId', select: 'name code' },
+      { path: 'bookEntryId', select: 'entryDate data' },
       { path: 'unit', select: 'name' },
       { path: 'department', select: 'name' }
     ]);
 
-    res.json({
-      success: true,
+    res.status(200).json({
+      status: 'success',
       message: 'Cập nhật giao việc thành công',
       data: updatedTask
     });
   } catch (error) {
-    res.status(500).json({ message: 'Lỗi cập nhật giao việc', error: error.message });
+    res.status(500).json({
+      status: 'error',
+      message: 'Lỗi cập nhật giao việc',
+      error: error.message
+    });
   }
 });
 
@@ -399,23 +452,33 @@ router.put('/:id/progress', auth, checkTaskPermission, auditLogger, async (req, 
     const task = await TaskAssignment.findById(req.params.id);
 
     if (!task) {
-      return res.status(404).json({ message: 'Không tìm thấy giao việc' });
+      return res.status(404).json({
+      status: 'error',
+      message: 'Không tìm thấy giao việc'
+    });
     }
 
     // Chỉ người được giao việc mới có thể cập nhật tiến độ
-    if (task.assignedTo.toString() !== req.user.id) {
-      return res.status(403).json({ message: 'Chỉ người được giao việc mới có thể cập nhật tiến độ' });
+    if (task.assignedTo.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+      status: 'error',
+      message: 'Chỉ người được giao việc mới có thể cập nhật tiến độ'
+    });
     }
 
-    await task.updateProgress(progress, req.user.id);
+    await task.updateProgress(progress, req.user._id);
 
-    res.json({
-      success: true,
+    res.status(200).json({
+      status: 'success',
       message: 'Cập nhật tiến độ thành công',
       data: task
     });
   } catch (error) {
-    res.status(500).json({ message: 'Lỗi cập nhật tiến độ', error: error.message });
+    res.status(500).json({
+      status: 'error',
+      message: 'Lỗi cập nhật tiến độ',
+      error: error.message
+    });
   }
 });
 
@@ -428,17 +491,24 @@ router.post('/:id/notes', auth, checkTaskPermission, auditLogger, async (req, re
     const task = await TaskAssignment.findById(req.params.id);
 
     if (!task) {
-      return res.status(404).json({ message: 'Không tìm thấy giao việc' });
+      return res.status(404).json({
+      status: 'error',
+      message: 'Không tìm thấy giao việc'
+    });
     }
 
-    await task.addNote(content, req.user.id);
+    await task.addNote(content, req.user._id);
 
-    res.json({
-      success: true,
+    res.status(200).json({
+      status: 'success',
       message: 'Thêm ghi chú thành công'
     });
   } catch (error) {
-    res.status(500).json({ message: 'Lỗi thêm ghi chú', error: error.message });
+    res.status(500).json({
+      status: 'error',
+      message: 'Lỗi thêm ghi chú',
+      error: error.message
+    });
   }
 });
 
@@ -451,29 +521,42 @@ router.put('/:id/approve', auth, auditLogger, async (req, res) => {
     const task = await TaskAssignment.findById(req.params.id);
 
     if (!task) {
-      return res.status(404).json({ message: 'Không tìm thấy giao việc' });
+      return res.status(404).json({
+      status: 'error',
+      message: 'Không tìm thấy giao việc'
+    });
     }
 
     if (!task.requiresApproval) {
-      return res.status(400).json({ message: 'Giao việc này không yêu cầu phê duyệt' });
+      return res.status(400).json({
+      status: 'error',
+      message: 'Giao việc này không yêu cầu phê duyệt'
+    });
     }
 
     // Kiểm tra quyền phê duyệt
     if (req.user.role !== 'admin' && req.user.role !== 'commander') {
-      return res.status(403).json({ message: 'Không có quyền phê duyệt' });
+      return res.status(403).json({
+      status: 'error',
+      message: 'Không có quyền phê duyệt'
+    });
     }
 
-    task.approvedBy = req.user.id;
+    task.approvedBy = req.user._id;
     task.approvedAt = new Date();
     task.approvalNotes = approvalNotes;
     await task.save();
 
-    res.json({
-      success: true,
+    res.status(200).json({
+      status: 'success',
       message: 'Phê duyệt giao việc thành công'
     });
   } catch (error) {
-    res.status(500).json({ message: 'Lỗi phê duyệt giao việc', error: error.message });
+    res.status(500).json({
+      status: 'error',
+      message: 'Lỗi phê duyệt giao việc',
+      error: error.message
+    });
   }
 });
 
@@ -484,22 +567,32 @@ router.delete('/:id', auth, checkTaskPermission, auditLogger, async (req, res) =
   try {
     const task = await TaskAssignment.findById(req.params.id);
     if (!task) {
-      return res.status(404).json({ message: 'Không tìm thấy giao việc' });
+      return res.status(404).json({
+      status: 'error',
+      message: 'Không tìm thấy giao việc'
+    });
     }
 
     // Chỉ admin hoặc người tạo mới có thể xóa
-    if (req.user.role !== 'admin' && task.createdBy.toString() !== req.user.id) {
-      return res.status(403).json({ message: 'Không có quyền xóa giao việc này' });
+    if (req.user.role !== 'admin' && task.createdBy.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+      status: 'error',
+      message: 'Không có quyền xóa giao việc này'
+    });
     }
 
     await TaskAssignment.findByIdAndDelete(req.params.id);
 
-    res.json({
-      success: true,
+    res.status(200).json({
+      status: 'success',
       message: 'Xóa giao việc thành công'
     });
   } catch (error) {
-    res.status(500).json({ message: 'Lỗi xóa giao việc', error: error.message });
+    res.status(500).json({
+      status: 'error',
+      message: 'Lỗi xóa giao việc',
+      error: error.message
+    });
   }
 });
 
@@ -516,22 +609,26 @@ router.get('/overdue', auth, async (req, res) => {
     } else if (user.role === 'commander') {
       query.unit = user.unit;
     } else {
-      query.assignedTo = user.id;
+      query.assignedTo = user._id;
     }
 
     const overdueTasks = await TaskAssignment.findOverdueTasks()
       .find(query)
-      .populate('assignedBy', 'name email')
-      .populate('assignedTo', 'name email')
-      .populate('bookId', 'title')
+      .populate('assignedBy', 'fullName email')
+      .populate('assignedTo', 'fullName email')
+      .populate('bookId', 'name')
       .populate('unit', 'name');
 
-    res.json({
-      success: true,
+    res.status(200).json({
+      status: 'success',
       data: overdueTasks
     });
   } catch (error) {
-    res.status(500).json({ message: 'Lỗi lấy danh sách công việc quá hạn', error: error.message });
+    res.status(500).json({
+      status: 'error',
+      message: 'Lỗi lấy danh sách công việc quá hạn',
+      error: error.message
+    });
   }
 });
 
@@ -552,7 +649,7 @@ router.get('/stats', auth, async (req, res) => {
         matchQuery.unit = user.unit;
       }
     } else {
-      matchQuery.assignedTo = user.id;
+      matchQuery.assignedTo = user._id;
     }
 
     console.log('Match query:', matchQuery);
@@ -601,8 +698,8 @@ router.get('/stats', auth, async (req, res) => {
       });
     }
 
-    res.json({
-      success: true,
+    res.status(200).json({
+      status: 'success',
       data: {
         total: totalTasks,
         overdue: overdueCount,
@@ -611,7 +708,11 @@ router.get('/stats', auth, async (req, res) => {
     });
   } catch (error) {
     console.error('Error in stats endpoint:', error);
-    res.status(500).json({ message: 'Lỗi lấy thống kê', error: error.message });
+    res.status(500).json({
+      status: 'error',
+      message: 'Lỗi lấy thống kê',
+      error: error.message
+    });
   }
 });
 
@@ -621,14 +722,18 @@ router.get('/stats', auth, async (req, res) => {
 router.get('/reminders/upcoming', auth, async (req, res) => {
   try {
     const { limit = 10 } = req.query;
-    const reminders = await reminderService.getUpcomingReminders(req.user.id, parseInt(limit));
+    const reminders = await reminderService.getUpcomingReminders(req.user._id, parseInt(limit));
     
-    res.json({
-      success: true,
+    res.status(200).json({
+      status: 'success',
       data: reminders
     });
   } catch (error) {
-    res.status(500).json({ message: 'Lỗi lấy danh sách nhắc nhở', error: error.message });
+    res.status(500).json({
+      status: 'error',
+      message: 'Lỗi lấy danh sách nhắc nhở',
+      error: error.message
+    });
   }
 });
 
@@ -640,7 +745,10 @@ router.post('/:id/reminders', auth, checkTaskPermission, async (req, res) => {
     const { message, scheduledAt } = req.body;
     
     if (!message || !scheduledAt) {
-      return res.status(400).json({ message: 'Thông báo và thời gian lên lịch là bắt buộc' });
+      return res.status(400).json({
+      status: 'error',
+      message: 'Thông báo và thời gian lên lịch là bắt buộc'
+    });
     }
 
     const success = await reminderService.sendManualReminder(req.params.id, message, scheduledAt);
@@ -651,10 +759,17 @@ router.post('/:id/reminders', auth, checkTaskPermission, async (req, res) => {
         message: 'Nhắc nhở đã được lên lịch thành công'
       });
     } else {
-      res.status(500).json({ message: 'Lỗi tạo nhắc nhở' });
+      res.status(500).json({
+      status: 'error',
+      message: 'Lỗi tạo nhắc nhở'
+    });
     }
   } catch (error) {
-    res.status(500).json({ message: 'Lỗi tạo nhắc nhở', error: error.message });
+    res.status(500).json({
+      status: 'error',
+      message: 'Lỗi tạo nhắc nhở',
+      error: error.message
+    });
   }
 });
 
@@ -664,17 +779,24 @@ router.post('/:id/reminders', auth, checkTaskPermission, async (req, res) => {
 router.post('/check-overdue', auth, async (req, res) => {
   try {
     if (req.user.role !== 'admin') {
-      return res.status(403).json({ message: 'Chỉ admin mới có thể chạy kiểm tra quá hạn' });
+      return res.status(403).json({
+      status: 'error',
+      message: 'Chỉ admin mới có thể chạy kiểm tra quá hạn'
+    });
     }
 
     await reminderService.checkOverdueTasks();
     
-    res.json({
-      success: true,
+    res.status(200).json({
+      status: 'success',
       message: 'Đã kiểm tra công việc quá hạn'
     });
   } catch (error) {
-    res.status(500).json({ message: 'Lỗi kiểm tra công việc quá hạn', error: error.message });
+    res.status(500).json({
+      status: 'error',
+      message: 'Lỗi kiểm tra công việc quá hạn',
+      error: error.message
+    });
   }
 });
 

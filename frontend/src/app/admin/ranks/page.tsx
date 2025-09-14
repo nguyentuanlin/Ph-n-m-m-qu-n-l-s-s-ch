@@ -134,12 +134,15 @@ export default function AdminRanksPage() {
   const fetchRanks = async () => {
     try {
       setLoading(true)
-      const token = localStorage.getItem('token') || ''
-      const response = await getRanks(token)
-      setRanks(response.data.ranks)
+      const response = await getRanks()
+      console.log('Ranks API response:', response)
+      // Backend now returns data directly, not nested in ranks property
+      const data = response.data || []
+      setRanks(Array.isArray(data) ? data : [])
     } catch (error) {
       console.error('Error fetching ranks:', error)
       showSnackbar('Không thể tải danh sách cấp bậc', 'error')
+      setRanks([])
     } finally {
       setLoading(false)
     }
@@ -174,6 +177,31 @@ export default function AdminRanksPage() {
       setError('')
       setLoading(true)
       
+      // Validate required fields
+      if (!formData.name.trim()) {
+        showSnackbar('Vui lòng nhập tên cấp bậc', 'error')
+        return
+      }
+      
+      if (!formData.level || formData.level < 1) {
+        showSnackbar('Vui lòng nhập cấp độ hợp lệ (>= 1)', 'error')
+        return
+      }
+      
+      if (!formData.category) {
+        showSnackbar('Vui lòng chọn phân loại', 'error')
+        return
+      }
+      
+      // Check if level already exists (for new ranks)
+      if (!isEditing) {
+        const existingRank = ranks.find(rank => rank.level === parseInt(formData.level))
+        if (existingRank) {
+          showSnackbar(`Cấp độ ${formData.level} đã tồn tại (${existingRank.name}). Vui lòng chọn cấp độ khác.`, 'error')
+          return
+        }
+      }
+      
       const token = localStorage.getItem('token') || ''
       const rankData = {
         ...formData,
@@ -191,6 +219,8 @@ export default function AdminRanksPage() {
       setIsModalOpen(false)
       fetchRanks()
     } catch (error: any) {
+      console.error('Error in handleSave:', error);
+      console.error('Error response:', error.response?.data);
       showSnackbar(error.message || 'Có lỗi xảy ra', 'error')
     } finally {
       setLoading(false)

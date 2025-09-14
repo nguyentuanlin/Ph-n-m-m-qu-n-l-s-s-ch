@@ -46,14 +46,12 @@ router.get('/', protect, auditLogger(), async (req, res) => {
 
     res.status(200).json({
       status: 'success',
-      data: {
-        notifications,
-        unreadCount,
-        pagination: {
-          current: parseInt(page),
-          pages: Math.ceil(total / limit),
-          total
-        }
+      data: notifications,
+      unreadCount,
+      pagination: {
+        current: parseInt(page),
+        pages: Math.ceil(total / limit),
+        total
       }
     });
   } catch (error) {

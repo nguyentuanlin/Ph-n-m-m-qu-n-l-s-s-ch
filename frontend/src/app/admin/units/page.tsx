@@ -26,7 +26,7 @@ import DeleteIcon from '@mui/icons-material/Delete'
 import AddIcon from '@mui/icons-material/Add'
 import { DataGrid, GridColDef } from '@mui/x-data-grid'
 import NotificationSnackbar from '@/components/common/NotificationSnackbar'
-import { getUnits, createUnit, updateUnit, deleteUnit } from '@/js/apiService'
+import { getUnits, createUnit, updateUnit, deleteUnit, CreateUpdateUnit } from '@/js/apiService'
 
 interface Unit {
   _id: string
@@ -178,9 +178,11 @@ export default function AdminUnitsPage() {
   const fetchUnits = async () => {
     try {
       setLoading(true)
-      const token = localStorage.getItem('token') || ''
-      const response = await getUnits(token)
-      setUnits(response.data.units)
+      const response = await getUnits()
+      console.log('Units API response:', response)
+      // Backend now returns data directly, not nested in units property
+      const data = response.data || []
+      setUnits(Array.isArray(data) ? data : [])
     } catch (error) {
       console.error('Error fetching units:', error)
       showSnackbar('Không thể tải danh sách đơn vị', 'error')
@@ -201,7 +203,10 @@ export default function AdminUnitsPage() {
       
       if (response.ok) {
         const data = await response.json()
-        setParentUnits(data.data.units)
+        console.log('Parent units API response:', data)
+        // Backend now returns data directly, not nested in units property
+        const units = data.data || []
+        setParentUnits(Array.isArray(units) ? units : [])
       }
     } catch (error) {
       console.error('Error fetching parent units:', error)
@@ -242,9 +247,13 @@ export default function AdminUnitsPage() {
       setLoading(true)
       
       const token = localStorage.getItem('token') || ''
-      const unitData = {
-        ...formData,
-        parentUnit: formData.parentUnit || undefined
+      const unitData: CreateUpdateUnit = {
+        name: formData.name,
+        code: formData.code,
+        type: formData.type,
+        parentUnit: formData.parentUnit || undefined,
+        location: formData.location,
+        description: formData.description
       }
       
       if (isEditing && currentUnit?._id) {
@@ -376,7 +385,7 @@ export default function AdminUnitsPage() {
                   label="Đơn vị cha"
                 >
                   <MenuItem value="">Không có</MenuItem>
-                  {parentUnits.map((unit) => (
+                  {(parentUnits || []).map((unit) => (
                     <MenuItem key={unit._id} value={unit._id}>
                       {unit.name} ({unit.code})
                     </MenuItem>

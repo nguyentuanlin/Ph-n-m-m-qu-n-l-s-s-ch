@@ -151,13 +151,11 @@ router.get('/performance', protect, restrictTo('admin', 'commander'), async (req
     if (userIds.length === 0) {
       return res.status(200).json({
         status: 'success',
-        data: {
-          performance: [],
-          pagination: {
-            current: parseInt(page),
-            pages: 0,
-            total: 0
-          }
+        data: [],
+        pagination: {
+          current: parseInt(page),
+          pages: 0,
+          total: 0
         }
       });
     }
@@ -244,13 +242,11 @@ router.get('/performance', protect, restrictTo('admin', 'commander'), async (req
 
     res.status(200).json({
       status: 'success',
-      data: {
-        performance: performanceData,
-        pagination: {
-          current: parseInt(page),
-          pages: Math.ceil((total[0]?.total || 0) / limit),
-          total: total[0]?.total || 0
-        }
+      data: performanceData,
+      pagination: {
+        current: parseInt(page),
+        pages: Math.ceil((total[0]?.total || 0) / limit),
+        total: total[0]?.total || 0
       }
     });
   } catch (error) {
@@ -346,13 +342,11 @@ router.get('/books', protect, restrictTo('admin', 'commander'), async (req, res)
 
     res.status(200).json({
       status: 'success',
-      data: {
-        books: bookCompletionData,
-        pagination: {
-          current: parseInt(page),
-          pages: Math.ceil(total / limit),
-          total
-        }
+      data: bookCompletionData,
+      pagination: {
+        current: parseInt(page),
+        pages: Math.ceil(total / limit),
+        total
       }
     });
   } catch (error) {
@@ -408,13 +402,11 @@ router.get('/late-entries', protect, restrictTo('admin', 'commander'), async (re
 
     res.status(200).json({
       status: 'success',
-      data: {
-        lateEntries,
-        pagination: {
-          current: parseInt(page),
-          pages: Math.ceil(total / limit),
-          total
-        }
+      data: lateEntries,
+      pagination: {
+        current: parseInt(page),
+        pages: Math.ceil(total / limit),
+        total
       }
     });
   } catch (error) {

@@ -120,25 +120,32 @@ export default function AdminUsersPage() {
         try {
             const token = localStorage.getItem("token") ?? "";
             const [ranksRes, unitsRes, departmentsRes, positionsRes] = await Promise.all([
-                getRanks(token),
-                getUnits(token),
+                getRanks(),
+                getUnits(),
                 getDepartments(),
                 getPositions()
             ]);
             
-            setRanks(ranksRes.data.ranks);
-            setUnits(unitsRes.data.units);
-            setDepartments(departmentsRes.data.departments);
-            setPositions(positionsRes.data.positions);
+            setRanks(ranksRes.data || []);
+            setUnits(unitsRes.data || []);
+            setDepartments(departmentsRes.data || []);
+            setPositions(positionsRes.data || []);
         } catch (error) {
             console.error('Error fetching reference data:', error);
         }
     };
 
     const fetchUsers = async () => {
-        const res = await getUsers();
-        const data = res.data.users ?? [];
-        setUsers(data);
+        try {
+            const res = await getUsers();
+            console.log('Users API response:', res);
+            // Backend now returns data directly, not nested in users property
+            const data = res.data || [];
+            setUsers(Array.isArray(data) ? data : []);
+        } catch (error) {
+            console.error('Error fetching users:', error);
+            setUsers([]);
+        }
     };
 
     const openEditModal = (user: any) => {

@@ -1,4 +1,4 @@
-// File: /Volumes/KING/PMHuanLuyennew/frontend/src/app/layout.tsx
+// File: /Volumes/KING/PMquanlysosach/Ph-n-m-m-qu-n-l-s-s-ch/frontend/src/app/layout.tsx
 import * as entry from '../../../src/app/layout.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

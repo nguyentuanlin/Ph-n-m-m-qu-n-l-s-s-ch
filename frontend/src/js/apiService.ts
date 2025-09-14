@@ -114,9 +114,9 @@ export const login = async (email: string, password: string): Promise<LoginRespo
     }
 };
 
-export const getUsers = async (): Promise<{data: {users: User[]}}> => {
+export const getUsers = async (): Promise<{data: User[]}> => {
     try {
-        const response = await apiService.get<{data: {users: User[]}}>('/users');
+        const response = await apiService.get<{data: User[]}>('/users');
         return response.data;
     } catch (error: any) {
         throw new Error(error.response?.data?.message || 'Failed to fetch users');
@@ -161,9 +161,9 @@ export interface Rank {
     updatedAt: string;
 }
 
-export const getRanks = async (): Promise<{data: {ranks: Rank[]}}> => {
+export const getRanks = async (): Promise<{data: Rank[]}> => {
     try {
-        const response = await apiService.get<{data: {ranks: Rank[]}}>('/ranks');
+        const response = await apiService.get<{data: Rank[]}>('/ranks');
         return response.data;
     } catch (error: any) {
         throw new Error(error.response?.data?.message || 'Failed to fetch ranks');
@@ -175,7 +175,17 @@ export const createRank = async (rank: Partial<Rank>): Promise<{data: {rank: Ran
         const response = await apiService.post<{data: {rank: Rank}}>('/ranks', rank);
         return response.data;
     } catch (error: any) {
-        throw new Error(error.response?.data?.message || 'Failed to create rank');
+        console.error('Create rank error:', error);
+        console.error('Error response data:', error.response?.data);
+        
+        // Handle different error types
+        if (error.response?.data?.message) {
+            throw new Error(error.response.data.message);
+        } else if (error.response?.data?.error) {
+            throw new Error(error.response.data.error);
+        } else {
+            throw new Error('Failed to create rank');
+        }
     }
 };
 
@@ -222,16 +232,26 @@ export interface Unit {
     updatedAt: string;
 }
 
-export const getUnits = async (): Promise<{data: {units: Unit[]}}> => {
+// Interface for creating/updating units (API expects parentUnit as string ID)
+export interface CreateUpdateUnit {
+    name: string;
+    code: string;
+    type: 'Tiểu đội' | 'Trung đội' | 'Đại đội' | 'Tiểu đoàn' | 'Trung đoàn' | 'Lữ đoàn' | 'Sư đoàn' | 'Quân đoàn' | 'Quân khu';
+    parentUnit?: string;
+    location?: string;
+    description?: string;
+}
+
+export const getUnits = async (): Promise<{data: Unit[]}> => {
     try {
-        const response = await apiService.get<{data: {units: Unit[]}}>('/units');
+        const response = await apiService.get<{data: Unit[]}>('/units');
         return response.data;
     } catch (error: any) {
         throw new Error(error.response?.data?.message || 'Failed to fetch units');
     }
 };
 
-export const createUnit = async (unit: Partial<Unit>): Promise<{data: {unit: Unit}}> => {
+export const createUnit = async (unit: CreateUpdateUnit): Promise<{data: {unit: Unit}}> => {
     try {
         const response = await apiService.post<{data: {unit: Unit}}>('/units', unit);
         return response.data;
@@ -240,7 +260,7 @@ export const createUnit = async (unit: Partial<Unit>): Promise<{data: {unit: Uni
     }
 };
 
-export const updateUnit = async (unitId: string, unit: Partial<Unit>): Promise<{data: {unit: Unit}}> => {
+export const updateUnit = async (unitId: string, unit: CreateUpdateUnit): Promise<{data: {unit: Unit}}> => {
     try {
         const response = await apiService.put<{data: {unit: Unit}}>(`/units/${unitId}`, unit);
         return response.data;
@@ -276,9 +296,9 @@ export interface Department {
     updatedAt: string;
 }
 
-export const getDepartments = async (): Promise<{data: {departments: Department[]}}> => {
+export const getDepartments = async (): Promise<{data: Department[]}> => {
     try {
-        const response = await apiService.get<{data: {departments: Department[]}}>('/departments');
+        const response = await apiService.get<{data: Department[]}>('/departments');
         return response.data;
     } catch (error: any) {
         throw new Error(error.response?.data?.message || 'Failed to fetch departments');
@@ -337,16 +357,30 @@ export interface Position {
     updatedAt: string;
 }
 
-export const getPositions = async (): Promise<{data: {positions: Position[]}}> => {
+// Interface for creating/updating positions (API expects department as string ID)
+export interface CreateUpdatePosition {
+    name: string;
+    code: string;
+    department: string;
+    level: 'Junior' | 'Senior' | 'Management' | 'Executive';
+    requirements: {
+        minRank?: string;
+        experience?: number;
+    };
+    responsibilities: string[];
+    description?: string;
+}
+
+export const getPositions = async (): Promise<{data: Position[]}> => {
     try {
-        const response = await apiService.get<{data: {positions: Position[]}}>('/positions');
+        const response = await apiService.get<{data: Position[]}>('/positions');
         return response.data;
     } catch (error: any) {
         throw new Error(error.response?.data?.message || 'Failed to fetch positions');
     }
 };
 
-export const createPosition = async (position: Partial<Position>): Promise<{data: {position: Position}}> => {
+export const createPosition = async (position: CreateUpdatePosition): Promise<{data: {position: Position}}> => {
     try {
         const response = await apiService.post<{data: {position: Position}}>('/positions', position);
         return response.data;
@@ -355,7 +389,7 @@ export const createPosition = async (position: Partial<Position>): Promise<{data
     }
 };
 
-export const updatePosition = async (positionId: string, position: Partial<Position>): Promise<{data: {position: Position}}> => {
+export const updatePosition = async (positionId: string, position: CreateUpdatePosition): Promise<{data: {position: Position}}> => {
     try {
         const response = await apiService.put<{data: {position: Position}}>(`/positions/${positionId}`, position);
         return response.data;
