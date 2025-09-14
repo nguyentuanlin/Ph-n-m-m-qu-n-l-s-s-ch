@@ -1,8 +1,0 @@
-{
-  "/_not-found/page": "app/_not-found/page.js",
-  "/admin/task-assignments/page": "app/admin/task-assignments/page.js",
-  "/admin/ranks/page": "app/admin/ranks/page.js",
-  "/page": "app/page.js",
-  "/pages/admins/users-management/page": "app/pages/admins/users-management/page.js",
-  "/admin/units/page": "app/admin/units/page.js"
-}
